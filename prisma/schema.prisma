@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id          String    @id
+  shop        String
+  state       String
+  isOnline    Boolean   @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+}
+
+model Store {
+  name             String           @id
+  forms            Form[]           @relation("StoreForms")
+  selectedFormId   Int?             @unique
+  selectedForm     Form?            @relation("SelectedForm", fields: [selectedFormId], references: [id])
+  subscriptionTier String           @default("free")
+  subscriptionPlan SubscriptionPlan @relation("StoreSubscriptions", fields: [subscriptionTier], references: [tier])
+  createdAt        DateTime         @default(now())
+}
+
+model SubscriptionPlan {
+  tier           String          @id
+  name           String
+  description    String
+  price          Float
+  stores         Store[]         @relation("StoreSubscriptions")
+  fieldTemplates FieldTemplate[] @relation("PlanFieldTemplates")
+  createdAt      DateTime        @default(now())
+}
+
+model Form {
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  storeId            String
+  store              Store               @relation("StoreForms", fields: [storeId], references: [name])
+  formFieldRelations FormFieldRelation[]
+  createdAt          DateTime            @default(now())
+  selectedByStore    Store?              @relation("SelectedForm")
+  isActive           Boolean             @default(true)
+}
+
+model FormFieldRelation {
+  id                   Int            @id @default(autoincrement())
+  position             Int
+  formId               Int
+  form                 Form           @relation(fields: [formId], references: [id])
+  fieldTemplateKeyName String?
+  fieldTemplate        FieldTemplate? @relation(fields: [fieldTemplateKeyName], references: [keyName])
+  createdAt            DateTime       @default(now())
+
+  @@unique([formId, position])
+}
+
+model FieldTemplate {
+  keyName            String              @id
+  fieldName          String
+  customLabel        String?
+  fieldType          String
+  options            String?
+  category           String
+  formFieldRelations FormFieldRelation[]
+  position           Int?
+  subscriptionTier   String              @default("free")
+  subscriptionPlan   SubscriptionPlan    @relation("PlanFieldTemplates", fields: [subscriptionTier], references: [tier])
+  createdAt          DateTime            @default(now())
+}
